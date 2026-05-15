@@ -86,6 +86,15 @@ export function EncodePanel({ disabled }) {
       {job?.error && <div className="encode-error">{job.error}</div>}
 
       {tasks.length > 0 && (
+        <div className="encode-progress">
+          <div
+            className="encode-progress-bar"
+            style={{ width: `${Math.round((done / tasks.length) * 100)}%` }}
+          />
+        </div>
+      )}
+
+      {tasks.length > 0 && (
         <ul className="task-list">
           {tasks.map((t) => (
             <li key={t.id} className={`task task--${t.status}`}>

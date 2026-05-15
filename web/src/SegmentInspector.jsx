@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { movementLabel, pieceLabel } from './pieces.js';
 import { formatTime } from './time.js';
 
@@ -68,8 +68,8 @@ export function SegmentInspector({ project, selectedId, applause, currentTime, o
       </div>
 
       <div className="prop-grid">
-        <Prop label="Start">{formatTime(seg.startTime)}</Prop>
-        <Prop label="End">{formatTime(seg.endTime)}</Prop>
+        <TimeField label="Start" value={seg.startTime} onChange={(v) => onUpdateSegment(selectedId, (s) => ({ ...s, startTime: clamp(v, 0, s.endTime - 0.1) }))} />
+        <TimeField label="End" value={seg.endTime} onChange={(v) => onUpdateSegment(selectedId, (s) => ({ ...s, endTime: clamp(v, s.startTime + 0.1, Infinity) }))} />
         <Prop label="Duration">{duration.toFixed(2)}s</Prop>
       </div>
 
@@ -231,6 +231,44 @@ function NumberField({ label, value, step = 1, min, max, unit, onChange }) {
         {unit && <span className="field-unit">{unit}</span>}
       </span>
     </label>
+  );
+}
+
+function parseTimeInput(str) {
+  const s = str.trim();
+  // plain seconds
+  if (/^\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+  // M:SS or H:MM:SS with optional decimals
+  const parts = s.split(':').map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return null;
+}
+
+function TimeField({ label, value, onChange }) {
+  const [draft, setDraft] = useState(null);
+  const displayed = draft !== null ? draft : formatTime(value);
+  return (
+    <div className="prop">
+      <span className="prop-label">{label}</span>
+      <input
+        className="prop-time-input"
+        value={displayed}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          if (draft !== null) {
+            const parsed = parseTimeInput(draft);
+            if (parsed !== null) onChange(parsed);
+            setDraft(null);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.target.blur();
+          if (e.key === 'Escape') setDraft(null);
+        }}
+      />
+    </div>
   );
 }
 

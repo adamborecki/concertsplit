@@ -157,6 +157,7 @@ kbd {
 .transport .time .now { color: var(--text); }
 .transport .time .sep, .transport .time .dur { color: var(--muted-2); }
 .transport .spacer { flex: 1; }
+.set-end-btn { background: var(--good) !important; color: #0f1115 !important; font-weight: 600; }
 .transport .divider {
   width: 1px;
   height: 18px;
@@ -171,6 +172,9 @@ kbd {
   border-radius: 6px;
   overflow: hidden;
 }
+.overview-wrap {
+  position: relative;
+}
 .overview {
   height: 64px;
   background: var(--panel);
@@ -178,6 +182,18 @@ kbd {
   border-radius: 6px;
   overflow: hidden;
 }
+.overview-markers {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.overview-marker { stroke-width: 1.5px; }
+.overview-marker--piece { stroke: var(--accent); opacity: 0.9; }
+.overview-marker--mov { stroke: var(--accent); opacity: 0.45; }
 
 /* Sidebar */
 .sidebar {
@@ -355,6 +371,7 @@ kbd {
 .prop { display: flex; flex-direction: column; gap: 1px; }
 .prop-label { color: var(--muted-2); text-transform: uppercase; letter-spacing: 0.06em; font-size: 9.5px; }
 .prop-value { color: var(--text); }
+.prop-time-input { background: var(--bg-2); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font: inherit; font-size: 12px; padding: 1px 4px; width: 100%; }
 .field-group {
   margin-top: 0.4rem;
 }
@@ -516,6 +533,19 @@ button.ghost:hover { color: var(--accent-2); background: var(--panel-2); }
   font-size: 12px;
 }
 .encode-actions button.secondary:hover:not(:disabled) { color: var(--text); }
+.encode-progress {
+  height: 4px;
+  background: var(--panel-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.encode-progress-bar {
+  height: 100%;
+  background: var(--good);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
 .encode-error {
   background: rgba(239, 100, 100, 0.1);
   border: 1px solid rgba(239, 100, 100, 0.3);

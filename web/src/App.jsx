@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Play, Pause } from 'lucide-react';
 import { usePeaks } from './usePeaks.js';
 import { usePeaksSegments } from './usePeaksSegments.js';
+import { useWaveformGestures } from './useWaveformGestures.js';
 import { useProject } from './useProject.js';
 import { useApplause } from './useApplause.js';
 import { Topbar } from './Topbar.jsx';
@@ -25,7 +27,9 @@ export default function App() {
   const overviewRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [paused, setPaused] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
+  const [settingEndFor, setSettingEndFor] = useState(null); // segment id currently in "set end" mode
 
   const masterUrl = project ? `/master/${encodeURIComponent(project.project.masterFile)}` : null;
 
@@ -57,17 +61,24 @@ export default function App() {
   };
 
   usePeaksSegments({ peaks, project, selectedId, applause, onSegmentChange });
+  useWaveformGestures({ containerRef: zoomviewRef, peaks, videoRef });
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     const onTimeUpdate = () => setCurrentTime(v.currentTime);
     const onLoaded = () => setDuration(v.duration);
+    const onPlay = () => setPaused(false);
+    const onPause = () => setPaused(true);
     v.addEventListener('timeupdate', onTimeUpdate);
     v.addEventListener('loadedmetadata', onLoaded);
+    v.addEventListener('play', onPlay);
+    v.addEventListener('pause', onPause);
     return () => {
       v.removeEventListener('timeupdate', onTimeUpdate);
       v.removeEventListener('loadedmetadata', onLoaded);
+      v.removeEventListener('play', onPlay);
+      v.removeEventListener('pause', onPause);
     };
   }, [masterUrl]);
 
@@ -77,9 +88,23 @@ export default function App() {
       const pieces = [...(prev.pieces || []), newPiece(span)];
       const renumbered = renumber(pieces);
       const added = renumbered.find((p) => p.startTime === span.startTime && p.endTime === span.endTime);
-      if (added) queueMicrotask(() => setSelectedId(`piece-${added.number}`));
+      if (added) {
+        const id = `piece-${added.number}`;
+        queueMicrotask(() => { setSelectedId(id); setSettingEndFor(id); });
+      }
       return { ...prev, pieces: renumbered };
     });
+  };
+
+  const confirmEnd = () => {
+    if (!settingEndFor) return;
+    const t = Math.max(currentTime, 0);
+    onSegmentChange(settingEndFor, (() => {
+      const pm = settingEndFor.match(/^piece-(\d+)$/);
+      const p = project?.pieces.find((p) => p.number === parseInt(pm[1], 10));
+      return p ? p.startTime : 0;
+    })(), t);
+    setSettingEndFor(null);
   };
 
   const addMovement = () => {
@@ -182,6 +207,8 @@ export default function App() {
         seek(v.currentTime + (e.shiftKey ? 0.1 : 1));
       } else if (e.key === '0') {
         seek(0);
+      } else if (e.key === 'e' || e.key === 'E') {
+        if (settingEndFor) { e.preventDefault(); confirmEnd(); }
       } else if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
         addPiece();
@@ -197,7 +224,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [peaks, project, selectedId, currentTime, duration]);
+  }, [peaks, project, selectedId, currentTime, duration, settingEndFor]);
 
   if (error) return <div className="error">Error: {error}</div>;
   if (!project) return <div className="loading">Loading project…</div>;
@@ -214,6 +241,7 @@ export default function App() {
           </div>
           <div className="transport">
             <button
+              className="play-btn"
               onClick={() => {
                 const v = videoRef.current;
                 if (!v) return;
@@ -222,7 +250,7 @@ export default function App() {
               }}
               disabled={!ready}
             >
-              Play / Pause
+              {paused ? <Play size={14} /> : <Pause size={14} />}
             </button>
             <div className="time">
               <span className="now">{formatTime(currentTime)}</span>
@@ -230,14 +258,21 @@ export default function App() {
               <span className="dur">{formatTime(duration)}</span>
             </div>
             <div className="spacer" />
-            <button onClick={addPiece} disabled={!ready}>+ Piece</button>
-            <button onClick={addMovement} disabled={!ready}>+ Movement</button>
+            {settingEndFor ? (
+              <button className="set-end-btn" onClick={confirmEnd}>Set End (E)</button>
+            ) : (
+              <button onClick={addPiece} disabled={!ready}>+ Piece</button>
+            )}
+            <button onClick={addMovement} disabled={!ready || !!settingEndFor}>+ Movement</button>
             <span className="divider" />
             <button onClick={() => peaks?.zoom.zoomOut()} disabled={!ready}>−</button>
             <button onClick={() => peaks?.zoom.zoomIn()} disabled={!ready}>+</button>
           </div>
           <div ref={zoomviewRef} className="zoomview" />
-          <div ref={overviewRef} className="overview" />
+          <div className="overview-wrap">
+            <div ref={overviewRef} className="overview" />
+            <OverviewMarkers project={project} duration={duration} />
+          </div>
         </div>
         <div className="right">
           <PiecesPanel
@@ -260,5 +295,42 @@ export default function App() {
       </div>
       <Bottombar />
     </div>
+  );
+}
+
+function OverviewMarkers({ project, duration }) {
+  if (!duration || !project?.pieces?.length) return null;
+  const marks = [];
+  for (const piece of project.pieces) {
+    marks.push({ t: piece.startTime, kind: 'piece' });
+    marks.push({ t: piece.endTime, kind: 'piece' });
+    for (const mov of piece.movements || []) {
+      marks.push({ t: mov.startTime, kind: 'mov' });
+      marks.push({ t: mov.endTime, kind: 'mov' });
+    }
+  }
+  // Deduplicate
+  const seen = new Set();
+  const unique = marks.filter(({ t }) => {
+    const k = Math.round(t * 10);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  return (
+    <svg className="overview-markers" aria-hidden="true">
+      {unique.map(({ t, kind }, i) => {
+        const pct = (t / duration) * 100;
+        return (
+          <line
+            key={i}
+            x1={`${pct}%`} x2={`${pct}%`}
+            y1="0" y2="100%"
+            className={`overview-marker overview-marker--${kind}`}
+          />
+        );
+      })}
+    </svg>
   );
 }

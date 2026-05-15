@@ -36,6 +36,7 @@ export function usePeaks({ enabled, videoRef, zoomviewRef, overviewRef, waveform
         highlightColor: 'rgba(79,163,255,0.18)',
         highlightStrokeColor: '#4fa3ff',
         playheadColor: '#fff',
+        showAxisLabels: false,
       },
       mediaElement: video,
       dataUri: { json: waveformDataUrl },
