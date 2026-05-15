@@ -26,6 +26,7 @@ export async function runPrep({ folder, masterFile, onProgress = console.log }) 
   await generateWaveform({
     masterPath,
     outPath: join(postprodDir, 'waveform.json'),
+    duration: info.duration,
     onProgress,
   });
 

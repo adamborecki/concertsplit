@@ -5,18 +5,43 @@ import { spawnFfmpeg } from '../ffmpeg.js';
 
 const SAMPLE_RATE = 22050;
 const SAMPLES_PER_PIXEL = 256;
+const NUM_CHUNKS = 8;
 
-export async function generateWaveform({ masterPath, outPath, onProgress }) {
+export async function generateWaveform({ masterPath, outPath, duration, onProgress }) {
   if (existsSync(outPath)) {
     onProgress?.('Waveform already exists — skipping.');
     return;
   }
   await mkdir(dirname(outPath), { recursive: true });
 
-  const peaks = await extractPeaks(masterPath, onProgress);
-  // peaks.js JSON format requires 8-bit values (-128..127); binary .dat supports 16-bit.
-  const peaks8 = new Array(peaks.length);
-  for (let i = 0; i < peaks.length; i++) peaks8[i] = Math.max(-128, Math.min(127, Math.round(peaks[i] / 256)));
+  if (!duration) duration = await probeDuration(masterPath);
+  const chunkDuration = duration / NUM_CHUNKS;
+
+  onProgress?.(`  Extracting peaks in ${NUM_CHUNKS} parallel chunks…`);
+
+  let completed = 0;
+  const chunkPeaks = await Promise.all(
+    Array.from({ length: NUM_CHUNKS }, (_, i) => {
+      const start = i * chunkDuration;
+      const end = i === NUM_CHUNKS - 1 ? duration : start + chunkDuration;
+      return extractPeaks(masterPath, start, end - start).then((peaks) => {
+        completed++;
+        onProgress?.(`  Chunk ${completed}/${NUM_CHUNKS} done.`);
+        return { i, peaks };
+      });
+    })
+  );
+
+  // Reassemble in order
+  const allPeaks = chunkPeaks
+    .sort((a, b) => a.i - b.i)
+    .flatMap((c) => c.peaks);
+
+  const peaks8 = new Array(allPeaks.length);
+  for (let i = 0; i < allPeaks.length; i++) {
+    peaks8[i] = Math.max(-128, Math.min(127, Math.round(allPeaks[i] / 256)));
+  }
+
   const json = {
     version: 2,
     channels: 1,
@@ -30,10 +55,30 @@ export async function generateWaveform({ masterPath, outPath, onProgress }) {
   onProgress?.(`Wrote waveform: ${peaks8.length / 2} peak pairs.`);
 }
 
-function extractPeaks(masterPath, onProgress) {
+function probeDuration(masterPath) {
   return new Promise((resolve, reject) => {
     const ff = spawnFfmpeg([
       '-v', 'error',
+      '-i', masterPath,
+      '-f', 'null', '-',
+    ]);
+    let stderr = '';
+    ff.stderr.on('data', (d) => { stderr += d.toString(); });
+    ff.on('error', reject);
+    ff.on('close', () => {
+      const m = stderr.match(/Duration:\s*(\d+):(\d+):([\d.]+)/);
+      if (!m) return reject(new Error('Could not determine duration'));
+      resolve(parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]));
+    });
+  });
+}
+
+function extractPeaks(masterPath, start, duration) {
+  return new Promise((resolve, reject) => {
+    const ff = spawnFfmpeg([
+      '-v', 'error',
+      '-ss', String(start),
+      '-t', String(duration),
       '-i', masterPath,
       '-ac', '1',
       '-ar', String(SAMPLE_RATE),
@@ -44,9 +89,6 @@ function extractPeaks(masterPath, onProgress) {
 
     const peaks = [];
     let leftover = Buffer.alloc(0);
-    let sampleCount = 0;
-    let lastReported = 0;
-
     let curMin = 32767;
     let curMax = -32768;
     let samplesInBucket = 0;
@@ -54,8 +96,7 @@ function extractPeaks(masterPath, onProgress) {
     ff.stdout.on('data', (chunk) => {
       const buf = leftover.length ? Buffer.concat([leftover, chunk]) : chunk;
       const fullSamples = Math.floor(buf.length / 2);
-      const bytesUsed = fullSamples * 2;
-      leftover = buf.subarray(bytesUsed);
+      leftover = buf.subarray(fullSamples * 2);
 
       for (let i = 0; i < fullSamples; i++) {
         const s = buf.readInt16LE(i * 2);
@@ -69,27 +110,15 @@ function extractPeaks(masterPath, onProgress) {
           samplesInBucket = 0;
         }
       }
-      sampleCount += fullSamples;
-      const seconds = sampleCount / SAMPLE_RATE;
-      if (onProgress && seconds - lastReported > 60) {
-        onProgress(`  ${formatTime(seconds)} processed…`);
-        lastReported = seconds;
-      }
     });
 
     let stderr = '';
     ff.stderr.on('data', (d) => { stderr += d.toString(); });
     ff.on('error', reject);
     ff.on('close', (code) => {
-      if (code !== 0) return reject(new Error(`ffmpeg waveform extraction failed: ${stderr.slice(-500)}`));
+      if (code !== 0) return reject(new Error(`ffmpeg waveform chunk failed: ${stderr.slice(-500)}`));
       if (samplesInBucket > 0) peaks.push(curMin, curMax);
       resolve(peaks);
     });
   });
-}
-
-function formatTime(seconds) {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }
