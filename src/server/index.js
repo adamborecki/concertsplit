@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { loadProject, saveProject } from './project.js';
+import { POSTPROD_DIR } from './prep/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = join(__dirname, '..', 'web');
@@ -20,6 +21,11 @@ export async function startServer({ folder, data }) {
     await saveProject(folder, req.body);
     res.json({ ok: true });
   });
+
+  app.use('/master', express.static(folder, {
+    setHeaders: (res) => res.setHeader('Accept-Ranges', 'bytes'),
+  }));
+  app.use('/postprod', express.static(join(folder, POSTPROD_DIR)));
 
   app.use(express.static(WEB_DIR));
 

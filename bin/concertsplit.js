@@ -2,6 +2,7 @@
 import { resolve } from 'node:path';
 import { runSetup } from '../src/server/setup.js';
 import { startServer } from '../src/server/index.js';
+import { runPrep } from '../src/server/prep/index.js';
 import open from 'open';
 
 const args = process.argv.slice(2);
@@ -27,6 +28,10 @@ const folder = folderArg ? resolve(folderArg) : null;
 
 try {
   const project = await runSetup(folder);
+  await runPrep({
+    folder: project.folder,
+    masterFile: project.data.project.masterFile,
+  });
   const { url } = await startServer(project);
   console.log(`\nconcertsplit is running at ${url}`);
   console.log('Press Ctrl+C to stop.');
