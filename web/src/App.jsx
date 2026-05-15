@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePeaks } from './usePeaks.js';
 import { usePeaksSegments } from './usePeaksSegments.js';
 import { useProject } from './useProject.js';
+import { useApplause } from './useApplause.js';
 import { Topbar } from './Topbar.jsx';
 import { Bottombar } from './Bottombar.jsx';
 import { PiecesPanel } from './PiecesPanel.jsx';
 import { EncodePanel } from './EncodePanel.jsx';
+import { SegmentInspector } from './SegmentInspector.jsx';
 import { formatTime } from './time.js';
 import {
   defaultSegmentSpan,
@@ -17,6 +19,7 @@ import {
 
 export default function App() {
   const { project, error, update, savingState } = useProject();
+  const applause = useApplause();
   const videoRef = useRef(null);
   const zoomviewRef = useRef(null);
   const overviewRef = useRef(null);
@@ -53,7 +56,7 @@ export default function App() {
     });
   };
 
-  usePeaksSegments({ peaks, project, selectedId, onSegmentChange });
+  usePeaksSegments({ peaks, project, selectedId, applause, onSegmentChange });
 
   useEffect(() => {
     const v = videoRef.current;
@@ -129,16 +132,18 @@ export default function App() {
     });
   };
 
-  const updateTitle = (id, title) => {
+  const updateTitle = (id, title) => updateSegment(id, (s) => ({ ...s, title }));
+
+  const updateSegment = (id, mutator) => {
     update((prev) => {
       const pm = id.match(/^piece-(\d+)$/);
       const mm = id.match(/^mov-(\d+)-([a-z])$/);
       const pieces = prev.pieces.map((p) => {
-        if (pm && p.number === parseInt(pm[1], 10)) return { ...p, title };
+        if (pm && p.number === parseInt(pm[1], 10)) return mutator(p);
         if (mm && p.number === parseInt(mm[1], 10)) {
           return {
             ...p,
-            movements: p.movements.map((m) => (m.letter === mm[2] ? { ...m, title } : m)),
+            movements: p.movements.map((m) => (m.letter === mm[2] ? mutator(m) : m)),
           };
         }
         return p;
@@ -242,6 +247,13 @@ export default function App() {
             onRemove={removeSegment}
             onSeek={seek}
             onUpdateTitle={updateTitle}
+          />
+          <SegmentInspector
+            project={project}
+            selectedId={selectedId}
+            applause={applause}
+            currentTime={currentTime}
+            onUpdateSegment={updateSegment}
           />
           <EncodePanel disabled={!project || (project.pieces || []).length === 0} />
         </div>
