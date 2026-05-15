@@ -6,7 +6,7 @@ import { loadProject, saveProject } from './project.js';
 import { POSTPROD_DIR } from './prep/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const WEB_DIR = join(__dirname, '..', 'web');
+const WEB_DIR = join(__dirname, '..', '..', 'web', 'dist');
 
 export async function startServer({ folder, data }) {
   const app = express();
@@ -31,9 +31,12 @@ export async function startServer({ folder, data }) {
 
   const server = createServer(app);
 
+  const desiredPort = process.env.CONCERTSPLIT_PORT
+    ? parseInt(process.env.CONCERTSPLIT_PORT, 10)
+    : 0;
   const port = await new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(desiredPort, '127.0.0.1', () => {
       const addr = server.address();
       resolve(typeof addr === 'object' && addr ? addr.port : null);
     });

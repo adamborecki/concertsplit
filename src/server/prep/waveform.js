@@ -14,17 +14,20 @@ export async function generateWaveform({ masterPath, outPath, onProgress }) {
   await mkdir(dirname(outPath), { recursive: true });
 
   const peaks = await extractPeaks(masterPath, onProgress);
+  // peaks.js JSON format requires 8-bit values (-128..127); binary .dat supports 16-bit.
+  const peaks8 = new Array(peaks.length);
+  for (let i = 0; i < peaks.length; i++) peaks8[i] = Math.max(-128, Math.min(127, Math.round(peaks[i] / 256)));
   const json = {
     version: 2,
     channels: 1,
     sample_rate: SAMPLE_RATE,
     samples_per_pixel: SAMPLES_PER_PIXEL,
-    bits: 16,
-    length: peaks.length / 2,
-    data: peaks,
+    bits: 8,
+    length: peaks8.length / 2,
+    data: peaks8,
   };
   await writeFile(outPath, JSON.stringify(json));
-  onProgress?.(`Wrote waveform: ${peaks.length / 2} peak pairs.`);
+  onProgress?.(`Wrote waveform: ${peaks8.length / 2} peak pairs.`);
 }
 
 function extractPeaks(masterPath, onProgress) {
