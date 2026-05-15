@@ -33,6 +33,7 @@ export async function runPrep({ folder, masterFile, onProgress = console.log }) 
   await generateThumbnails({
     masterPath,
     outDir: join(postprodDir, 'thumbnails'),
+    duration: info.duration,
     onProgress,
   });
 
