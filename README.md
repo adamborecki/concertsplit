@@ -14,6 +14,7 @@ git clone https://github.com/adamborecki/concertsplit.git
 cd concertsplit
 npm install
 npm run build
+npm install -g .
 ```
 
 ## Running
@@ -21,7 +22,7 @@ npm run build
 Point it at a folder containing your concert video file:
 
 ```bash
-node bin/concertsplit.js /path/to/concert-folder
+concertsplit /path/to/concert-folder
 ```
 
 On first run it will ask you to pick the master video file and enter a project name, then create a `project.json` in that folder. On subsequent runs it loads the existing project automatically.
