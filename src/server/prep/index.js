@@ -4,6 +4,7 @@ import { probe } from '../ffmpeg.js';
 import { generateWaveform } from './waveform.js';
 import { generateThumbnails } from './thumbnails.js';
 import { detectApplause } from './applause.js';
+import { detectSilence } from './silence.js';
 
 const POSTPROD_DIR = '.postprod';
 
@@ -42,6 +43,13 @@ export async function runPrep({ folder, masterFile, onProgress = console.log }) 
   await detectApplause({
     masterPath,
     outPath: join(postprodDir, 'applause-candidates.json'),
+    onProgress,
+  });
+
+  onProgress('\nDetecting silence regions…');
+  await detectSilence({
+    masterPath,
+    outPath: join(postprodDir, 'silence-regions.json'),
     onProgress,
   });
 

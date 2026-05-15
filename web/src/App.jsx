@@ -5,6 +5,7 @@ import { usePeaksSegments } from './usePeaksSegments.js';
 import { useWaveformGestures } from './useWaveformGestures.js';
 import { useProject } from './useProject.js';
 import { useApplause } from './useApplause.js';
+import { useSilence } from './useSilence.js';
 import { Topbar } from './Topbar.jsx';
 import { Bottombar } from './Bottombar.jsx';
 import { PiecesPanel } from './PiecesPanel.jsx';
@@ -22,6 +23,7 @@ import {
 export default function App() {
   const { project, error, update, savingState } = useProject();
   const applause = useApplause();
+  const silence = useSilence();
   const videoRef = useRef(null);
   const zoomviewRef = useRef(null);
   const overviewRef = useRef(null);
@@ -60,7 +62,7 @@ export default function App() {
     });
   };
 
-  usePeaksSegments({ peaks, project, selectedId, applause, onSegmentChange });
+  usePeaksSegments({ peaks, project, selectedId, applause, silence, onSegmentChange });
   useWaveformGestures({ containerRef: zoomviewRef, peaks, videoRef });
 
   useEffect(() => {

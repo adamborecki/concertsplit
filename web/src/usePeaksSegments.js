@@ -1,13 +1,25 @@
 import { useEffect } from 'react';
 import { movementLabel, movementsAndPieceColors, pieceLabel } from './pieces.js';
 
-export function usePeaksSegments({ peaks, project, selectedId, applause, onSegmentChange }) {
+export function usePeaksSegments({ peaks, project, selectedId, applause, silence, onSegmentChange }) {
   useEffect(() => {
     if (!peaks || !project) return;
     const segments = peaks.segments;
     segments.removeAll();
 
     const items = [];
+    (silence || []).forEach((s, i) => {
+      items.push({
+        id: `silence-${i}`,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        color: 'rgba(100, 200, 255, 0.08)',
+        borderColor: 'rgba(100, 200, 255, 0.35)',
+        labelText: '',
+        editable: false,
+      });
+    });
+
     (applause || []).forEach((a, i) => {
       items.push({
         id: `applause-${i}`,
@@ -66,7 +78,7 @@ export function usePeaksSegments({ peaks, project, selectedId, applause, onSegme
     });
 
     segments.add(items);
-  }, [peaks, project, selectedId, applause]);
+  }, [peaks, project, selectedId, applause, silence]);
 
   useEffect(() => {
     if (!peaks || !onSegmentChange) return;
