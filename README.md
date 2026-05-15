@@ -10,8 +10,8 @@ A local web app for splitting classical concert recordings into individual piece
 ## Setup
 
 ```bash
-git clone https://github.com/adamborecki/post-production-webapp.git
-cd post-production-webapp
+git clone https://github.com/adamborecki/concertsplit.git
+cd concertsplit
 npm install
 npm run build
 ```
