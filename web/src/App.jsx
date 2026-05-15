@@ -5,6 +5,7 @@ import { useProject } from './useProject.js';
 import { Topbar } from './Topbar.jsx';
 import { Bottombar } from './Bottombar.jsx';
 import { PiecesPanel } from './PiecesPanel.jsx';
+import { EncodePanel } from './EncodePanel.jsx';
 import { formatTime } from './time.js';
 import {
   defaultSegmentSpan,
@@ -233,14 +234,17 @@ export default function App() {
           <div ref={zoomviewRef} className="zoomview" />
           <div ref={overviewRef} className="overview" />
         </div>
-        <PiecesPanel
-          project={project}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          onRemove={removeSegment}
-          onSeek={seek}
-          onUpdateTitle={updateTitle}
-        />
+        <div className="right">
+          <PiecesPanel
+            project={project}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onRemove={removeSegment}
+            onSeek={seek}
+            onUpdateTitle={updateTitle}
+          />
+          <EncodePanel disabled={!project || (project.pieces || []).length === 0} />
+        </div>
       </div>
       <Bottombar />
     </div>

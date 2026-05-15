@@ -110,6 +110,14 @@ kbd {
   min-height: 0;
 }
 
+.right {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 0;
+  border-left: 1px solid var(--panel-border);
+}
+.right .sidebar { border-left: none; }
+
 .center {
   display: grid;
   grid-template-rows: 1fr auto auto auto;
@@ -294,6 +302,80 @@ kbd {
   line-height: 1;
 }
 .row .delete:hover { color: var(--danger); }
+
+/* Encode panel */
+.encode-panel {
+  background: var(--panel);
+  border-top: 1px solid var(--panel-border);
+  padding: 0.8rem 0.9rem;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.encode-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+.encode-header h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin: 0;
+}
+.encode-count {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+.encode-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+.encode-actions button {
+  flex: 1;
+}
+.encode-actions button.secondary {
+  background: transparent;
+  flex: 0 1 auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.encode-actions button.secondary:hover:not(:disabled) { color: var(--text); }
+.encode-error {
+  background: rgba(239, 100, 100, 0.1);
+  border: 1px solid rgba(239, 100, 100, 0.3);
+  color: var(--danger);
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 0.5rem;
+}
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+}
+.task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.task-name { color: var(--muted); }
+.task-status { color: var(--muted-2); padding-left: 0.5rem; }
+.task--running .task-name { color: var(--text); }
+.task--running .task-status { color: var(--accent); }
+.task--done .task-name { color: var(--text); }
+.task--done .task-status { color: var(--good); }
+.task--skipped .task-status { color: var(--muted-2); font-size: 10px; }
+.task--error .task-name { color: var(--text); }
+.task--error .task-status { color: var(--danger); }
 
 /* Bottombar */
 .bottombar {

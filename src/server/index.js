@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { loadProject, saveProject } from './project.js';
 import { POSTPROD_DIR } from './prep/index.js';
+import { getJob, startEncodeJob } from './encode/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = join(__dirname, '..', '..', 'web', 'dist');
@@ -20,6 +21,24 @@ export async function startServer({ folder, data }) {
   app.put('/api/project', async (req, res) => {
     await saveProject(folder, req.body);
     res.json({ ok: true });
+  });
+
+  app.post('/api/encode', async (req, res) => {
+    try {
+      const fresh = await loadProject(folder);
+      const job = await startEncodeJob({
+        folder,
+        project: fresh ?? data,
+        force: Boolean(req.body?.force),
+      });
+      res.json(job);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/encode/status', (_req, res) => {
+    res.json(getJob() ?? { state: 'idle', tasks: [] });
   });
 
   app.use('/master', express.static(folder, {
