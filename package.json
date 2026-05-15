@@ -1,0 +1,21 @@
+{
+  "name": "concertsplit",
+  "version": "0.0.1",
+  "description": "Split classical concert recordings into individual piece and movement files.",
+  "type": "module",
+  "bin": {
+    "concertsplit": "./bin/concertsplit.js"
+  },
+  "scripts": {
+    "start": "node bin/concertsplit.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "open": "^10.1.0",
+    "prompts": "^2.4.2"
+  },
+  "license": "MIT"
+}
